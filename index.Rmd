@@ -1,8 +1,25 @@
 ---
 title: "Practical Machine Learning Course Project"
-author: "Jeffrey Hunter"
-date: "6/6/2019"
-output: html_document
+author: "Jeffrey M. Hunter"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    theme: cosmo
+    keep_md: no
+    df_print: paged
+  pdf_document:
+    toc: yes
+    df_print: kable
+    number_sections: false
+    fig_caption: yes
+    highlight: tango
+    dev: pdf
+  word_document:
+    toc: yes
+    df_print: paged
+    keep_md: no
 ---
 
 ```{r setup, include=FALSE}

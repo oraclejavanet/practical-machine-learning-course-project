@@ -14,4 +14,4 @@ Peer-graded Assignment: Course Project
 
 **Analysis report available on RPubs**
 
-* <a href="http://rpubs.com/OracleJavaNet/499096">Practical Machine Learning Course Project</a>
+* <a href="http://rpubs.com/OracleJavaNet/502802">Practical Machine Learning Course Project</a>

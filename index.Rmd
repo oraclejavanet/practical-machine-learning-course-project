@@ -22,26 +22,95 @@ output:
     keep_md: no
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+## Synopsis
+
+This report contains research that was conducted for the Practical Machine
+Learning course as part of the Data Science Specialization offered through
+Coursera from Johns Hopkins University. This writeup was built in RStudio
+using the knitr function to publish the final report in HTML format.
+
+## Introduction
+
+Using devices such as *Jawbone Up*, *Nike FuelBand*, and *Fitbit* it is now
+possible to collect a large amount of data about personal activity relatively
+inexpensively. These type of devices are part of the quantified self movement –
+a group of enthusiasts who take measurements about themselves regularly to
+improve their health, to find patterns in their behavior, or because they are
+tech geeks. One thing that people regularly do is quantify how much of a
+particular activity they do, but they rarely quantify how well they do it.
+
+The goal for this assignment is to analyze the *Weight Lifting Exercise*
+dataset and develop a machine learning algorithm to predict the manner in which
+6 participants performed a particular dumbbell exercise. This is the "classe"
+variable in the training set. 
+
+The data was collected from accelerometers on the belt, forearm, arm, and
+dumbbell of the 6 participants. The participants were asked to perform barbell
+lifts correctly and incorrectly in 5 different ways. For more information about
+the dataset used for this analysis, see section
+<a target="_blank" href="http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises">Weight Lifting Exercises Dataset</a>
+from the Human Activity Recognition (HAR) project website.
+
+The resulting prediction model will also serve as the basis for the
+"Course Project Prediction Quiz Portion" of this assignment where the machine
+learning algorithm will be applied to 20 test cases available in the test data
+and the predictions will submitted in the appropriate format for automated
+grading.
+
+## Environment Setup
+
+```{r load-packages, message = FALSE, echo = TRUE}
+library(knitr)
+library(caret)
+library(randomForest)
+
 ```
 
-## R Markdown
+```{r setup, include = FALSE}
+# set knitr options
+knitr::opts_chunk$set(echo = TRUE, fig.path = 'figures/')
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+# clear global workspace (including hidden objects) for this session
+rm(list = ls(all.names = TRUE))
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+# free up memory and display statistics on free memory
+gc()
 
-```{r cars}
-summary(cars)
+# disable scientific notation for numbers
+options(scipen = 1)
+
+# knit hook to allow partial output from a code chunk
+hook_output <- knit_hooks$get("output")
+knit_hooks$set(output = function(x, options) {
+  lines <- options$output.lines
+  if (is.null(lines)) {
+    return(hook_output(x, options)) # pass to default hook
+  }
+  x <- unlist(strsplit(x, "\n"))
+  more <- "..."
+  if (length(lines) == 1) { # first n lines
+    if (length(x) > lines) {
+      # truncate the output, but add ....
+      x <- c(head(x, lines), more)
+    }
+  } else {
+    x <- c(more, x[lines], more)
+  }
+  # paste these lines together
+  x <- paste(c(x, ""), collapse = "\n")
+  hook_output(x, options)
+})
 ```
 
-## Including Plots
+## Prepare the Data
 
-You can also embed plots, for example:
+### Load Data
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+Load the mtcars dataset and display the internal structure of the variables.
+
+```{r load-data, echo = TRUE}
+library(datasets)
+data(mtcars)
+str(mtcars)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

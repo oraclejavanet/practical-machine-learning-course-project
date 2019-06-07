@@ -62,19 +62,21 @@ grading.
 
 ## Environment Setup
 
+Prepare the session by loading all necessary packages and clearing the global
+workspace (including hidden objects).
+
 ```{r load-packages, message = FALSE, echo = TRUE}
 library(knitr)
 library(caret)
 library(randomForest)
-
+rm(list = ls(all.names = TRUE))
+setwd("~/repos/coursera/github-assignments/practical-machine-learning-course-project")
 ```
+
 
 ```{r setup, include = FALSE}
 # set knitr options
 knitr::opts_chunk$set(echo = TRUE, fig.path = 'figures/')
-
-# clear global workspace (including hidden objects) for this session
-rm(list = ls(all.names = TRUE))
 
 # free up memory and display statistics on free memory
 gc()
@@ -109,11 +111,27 @@ knit_hooks$set(output = function(x, options) {
 
 ### Load Data
 
-Load the mtcars dataset and display the internal structure of the variables.
-
 ```{r load-data, echo = TRUE}
-library(datasets)
-data(mtcars)
-str(mtcars)
+trainURL <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testURL  <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+trainDataFile <- "data/pml-training.csv"
+testDataFile <- "data/pml-testing.csv"
+
+if (!file.exists('data')) {
+    dir.create('data')
+}
+if (!file.exists(trainDataFile)) {
+    download.file(url = trainURL, destfile = trainDataFile)
+}
+if (!file.exists(testDataFile)) {
+    download.file(url = testURL, destfile = testDataFile)
+}
+
+trainData <- read.csv(trainDataFile, sep = ",", header = TRUE)
+testData <- read.csv(testDataFile, sep = ",", header = TRUE)
+
+stopifnot(dim(trainData) == c(19622, 160))
+stopifnot(dim(testData) == c(20, 160))
 ```
 

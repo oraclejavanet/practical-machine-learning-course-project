@@ -2832,7 +2832,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Practical Machine Learning Course Project</h1>
 <h4 class="author">Jeffrey M. Hunter</h4>
-<h4 class="date">06 June, 2019</h4>
+<h4 class="date">07 June, 2019</h4>
 
 </div>
 
@@ -2851,30 +2851,38 @@ div.tocify {
 </div>
 <div id="environment-setup" class="section level2">
 <h2>Environment Setup</h2>
+<p>Prepare the session by loading all necessary packages and clearing the global workspace (including hidden objects).</p>
 <pre class="r"><code>library(knitr)
 library(caret)
-library(randomForest)</code></pre>
+library(randomForest)
+rm(list = ls(all.names = TRUE))
+setwd(&quot;~/repos/coursera/github-assignments/practical-machine-learning-course-project&quot;)</code></pre>
 </div>
 <div id="prepare-the-data" class="section level2">
 <h2>Prepare the Data</h2>
 <div id="load-data" class="section level3">
 <h3>Load Data</h3>
-<p>Load the mtcars dataset and display the internal structure of the variables.</p>
-<pre class="r"><code>library(datasets)
-data(mtcars)
-str(mtcars)</code></pre>
-<pre><code>## 'data.frame':    32 obs. of  11 variables:
-##  $ mpg : num  21 21 22.8 21.4 18.7 18.1 14.3 24.4 22.8 19.2 ...
-##  $ cyl : num  6 6 4 6 8 6 8 4 4 6 ...
-##  $ disp: num  160 160 108 258 360 ...
-##  $ hp  : num  110 110 93 110 175 105 245 62 95 123 ...
-##  $ drat: num  3.9 3.9 3.85 3.08 3.15 2.76 3.21 3.69 3.92 3.92 ...
-##  $ wt  : num  2.62 2.88 2.32 3.21 3.44 ...
-##  $ qsec: num  16.5 17 18.6 19.4 17 ...
-##  $ vs  : num  0 0 1 1 0 1 0 1 1 1 ...
-##  $ am  : num  1 1 1 0 0 0 0 0 0 0 ...
-##  $ gear: num  4 4 4 3 3 3 3 4 4 4 ...
-##  $ carb: num  4 4 1 1 2 1 4 2 2 4 ...</code></pre>
+<pre class="r"><code>trainURL &lt;- &quot;http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv&quot;
+testURL  &lt;- &quot;http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&quot;
+
+trainDataFile &lt;- &quot;data/pml-training.csv&quot;
+testDataFile &lt;- &quot;data/pml-testing.csv&quot;
+
+if (!file.exists('data')) {
+    dir.create('data')
+}
+if (!file.exists(trainDataFile)) {
+    download.file(url = trainURL, destfile = trainDataFile)
+}
+if (!file.exists(testDataFile)) {
+    download.file(url = testURL, destfile = testDataFile)
+}
+
+trainData &lt;- read.csv(trainDataFile, sep = &quot;,&quot;, header = TRUE)
+testData &lt;- read.csv(testDataFile, sep = &quot;,&quot;, header = TRUE)
+
+stopifnot(dim(trainData) == c(19622, 160))
+stopifnot(dim(testData) == c(20, 160))</code></pre>
 </div>
 </div>
 

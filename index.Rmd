@@ -9,6 +9,7 @@ output:
     theme: cosmo
     keep_md: no
     df_print: paged
+    css: css/custom.css
   pdf_document:
     toc: yes
     df_print: kable
@@ -43,22 +44,21 @@ tech geeks. One thing that people regularly do is quantify how much of a
 particular activity they do, but they rarely quantify how well they do it.
 
 The goal for this assignment is to analyze the *Weight Lifting Exercise*
-dataset and develop a machine learning algorithm to predict the manner in which
-6 participants performed a particular dumbbell exercise. This is the "classe"
-variable in the training set. 
+dataset and develop a machine learning algorithm using biometric data to predict
+the manner in which 6 participants performed a particular dumbbell exercise.
+This is the "classe" variable in the training set.
 
-The data was collected from accelerometers on the belt, forearm, arm, and
-dumbbell of the 6 participants. The participants were asked to perform barbell
-lifts correctly and incorrectly in 5 different ways. For more information about
-the dataset used for this analysis, see section
-<a target="_blank" href="http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises">Weight Lifting Exercises Dataset</a>
-from the Human Activity Recognition (HAR) project website.
+The biometric data was collected from accelerometers on the belt, forearm, arm,
+and dumbbell of the 6 participants. The participants were asked to perform
+barbell lifts correctly and incorrectly in 5 different ways.
+
+> For more information about the dataset used for this analysis, see section
+<a target="_blank" href="http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises">Weight Lifting Exercises Dataset</a> from the Human Activity Recognition (HAR) project website.
 
 The resulting prediction model will also serve as the basis for the
 "Course Project Prediction Quiz Portion" of this assignment where the machine
-learning algorithm will be applied to 20 test cases available in the test data
-and the predictions will submitted in the appropriate format for automated
-grading.
+learning algorithm will be applied to 20 test cases available in the test data.
+The predictions will submitted in the appropriate format for automated grading.
 
 ## Environment Setup
 
@@ -67,12 +67,12 @@ workspace (including hidden objects).
 
 ```{r load-packages, message = FALSE, echo = TRUE}
 library(knitr)
+library(ggplot2)
 library(caret)
 library(randomForest)
 rm(list = ls(all.names = TRUE))
 setwd("~/repos/coursera/github-assignments/practical-machine-learning-course-project")
 ```
-
 
 ```{r setup, include = FALSE}
 # set knitr options
@@ -109,14 +109,14 @@ knit_hooks$set(output = function(x, options) {
 
 ## Prepare the Data
 
-### Load Data
+### Load the Data
 
 ```{r load-data, echo = TRUE}
 trainURL <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
-testURL  <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+validationURL  <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 
 trainDataFile <- "data/pml-training.csv"
-testDataFile <- "data/pml-testing.csv"
+validationDataFile <- "data/pml-testing.csv"
 
 if (!file.exists('data')) {
     dir.create('data')
@@ -124,14 +124,93 @@ if (!file.exists('data')) {
 if (!file.exists(trainDataFile)) {
     download.file(url = trainURL, destfile = trainDataFile)
 }
-if (!file.exists(testDataFile)) {
-    download.file(url = testURL, destfile = testDataFile)
+if (!file.exists(validationDataFile)) {
+    download.file(url = validationURL, destfile = validationDataFile)
 }
 
 trainData <- read.csv(trainDataFile, sep = ",", header = TRUE)
-testData <- read.csv(testDataFile, sep = ",", header = TRUE)
+validationData <- read.csv(validationDataFile, sep = ",", header = TRUE)
 
-stopifnot(dim(trainData) == c(19622, 160))
-stopifnot(dim(testData) == c(20, 160))
+stopifnot(file.size(trainDataFile) == 12202745)
+stopifnot(file.size(validationDataFile) == 15113)
 ```
+
+```{r dataset-dimensions, echo = TRUE}
+dim(trainData)
+dim(validationData)
+```
+
+The training dataset contains `r dim(trainData)[1]` observations and
+`r dim(trainData)[2]` variables while the testing dataset (used for the
+prediction quiz portion of the assignment) contains `r dim(validationData)[1]`
+observations and `r dim(validationData)[2]` variables.
+
+### Clean the Data
+
+*Pending*
+
+```{r clean-data, echo = TRUE}
+```
+
+### Partition the Data
+
+In order to accurately estimate the out-of-sample error, partition the training
+dataset (`trainData`) into two sets: 60% of the training data for the modeling
+process and the remaining 40% for the test set. This will be performed using
+random subsampling without replacement.
+
+```{r partition-data, echo = TRUE}
+inTrain  <- createDataPartition(trainData$classe, p = 0.6, list = FALSE)
+trainSet <- trainData[inTrain, ]
+testSet  <- trainData[-inTrain, ]
+```
+
+The `validationData` test dataset will only be used for the "Course Project
+Prediction Quiz Portion" of this assignment and thus will remain unchanged.
+
+### Exploratory Data Analysis
+
+The 6 young and healthy participants were asked to perform one set of 10
+repetitions of the *Unilateral Dumbbell Biceps Curl* in the following 5
+different fashions:
+
+* Class A: exactly according to the specification
+* Class B: throwing the elbows to the front
+* Class C: lifting the dumbbell only halfway
+* Class D: lowering the dumbbell only halfway
+* Class E: throwing the hips to the front
+
+This is the "classe" variable in the training set and is used as an indicator
+of the training outcome. Class A corresponds to the specified execution of the
+exercise, while the other 4 classes correspond to common mistakes.
+
+The following plot shows the distribution of the classe variable in the training
+set.
+
+```{r dist-classe-var-training-set, echo = TRUE}
+g <- ggplot(trainSet, aes(classe))
+g <- g + geom_bar(fill = rgb(0.2, 0.4, 0.6, 0.8))
+g <- g + xlab("Classe Level")
+g <- g + ylab("Frequency")
+g <- g + theme(plot.title = element_text(size = 14, hjust = 0.5, vjust = 0.5),
+               axis.text.x = element_text(hjust = 0.5, vjust = 0.5),
+               axis.text.y = element_text(hjust = 0.5, vjust = 0.5))
+g <- g + ggtitle("Distribution of the Classe Variable in the Training Set")
+print(g)
+```
+
+## Prediction Model Building
+
+*Pending*
+
+### Random Forest
+
+*Pending*
+
+### Decision Tree
+
+*Pending*
+
+
+
 

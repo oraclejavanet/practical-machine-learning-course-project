@@ -69,6 +69,7 @@ workspace (including hidden objects).
 library(knitr)
 library(ggplot2)
 library(caret)
+library(corrplot)
 library(randomForest)
 rm(list = ls(all.names = TRUE))
 setwd("~/repos/coursera/github-assignments/practical-machine-learning-course-project")
@@ -147,19 +148,47 @@ observations and `r dim(validationData)[2]` variables.
 
 ### Clean the Data
 
-*Pending*
+An initial review of both datasets revealed a larger number of missing values
+as well as columns not relevant for prediction. Reduce the number of features
+to only include data columns that make sense for prediction.
 
 ```{r clean-data, echo = TRUE}
+# remove variables with 'Nearly Zero Variance'
+NZV <- nearZeroVar(trainData)
+trainData  <- trainData[, -NZV]
+validationData  <- validationData[, -NZV]
+
+# remove variables that are mostly NA
+mostlyNA <- sapply(trainData, function(x) mean(is.na(x))) > 0.95
+trainData <- trainData[, mostlyNA == FALSE]
+validationData <- validationData[, mostlyNA == FALSE]
+
+# remove first 7 variables (time series or non-numeric data)
+trainData <- trainData[, -c(1:7)]
+validationData <- validationData[, -c(1:7)]
+
+# determine data variables that will be used to fit models
+dataVariables <- names(trainData[, 1:(length(trainData)-1)])
+```
+
+After cleaning, the models will be fit using the following
+`r length(dataVariables)` variables:
+
+```{r show-model-variables, echo = FALSE}
+dataVariables
 ```
 
 ### Partition the Data
 
-In order to accurately estimate the out-of-sample error, partition the training
-dataset (`trainData`) into two sets: 60% of the training data for the modeling
-process and the remaining 40% for the test set. This will be performed using
-random subsampling without replacement.
+Knowing that we will be predicting the "classe" variable as the indicator of the
+training outcome, partition the training dataset (`trainData`) into two sets:
+60% of the training data for the modeling process and the remaining 40% for the
+test set. This will be performed using random subsampling without replacement.
+Cross-validation within the training set will be used to improve model fit
+followed by an out-of-sample test with the test set.
 
 ```{r partition-data, echo = TRUE}
+set.seed(666700)
 inTrain  <- createDataPartition(trainData$classe, p = 0.6, list = FALSE)
 trainSet <- trainData[inTrain, ]
 testSet  <- trainData[-inTrain, ]
@@ -168,7 +197,7 @@ testSet  <- trainData[-inTrain, ]
 The `validationData` test dataset will only be used for the "Course Project
 Prediction Quiz Portion" of this assignment and thus will remain unchanged.
 
-### Exploratory Data Analysis
+## Exploratory Data Analysis
 
 The 6 young and healthy participants were asked to perform one set of 10
 repetitions of the *Unilateral Dumbbell Biceps Curl* in the following 5
@@ -201,16 +230,33 @@ print(g)
 
 ## Prediction Model Building
 
+The following three modeling algorithms will be used in this analysis to
+determine which one provides the best out-of-sample accuracy:
+
+* Decision Trees
+* Random Forests
+* Generalized Boosted Model
+
+At the end of each analysis, a confusion matrix will be shown to better
+visualize the accuracy of the predictions.
+
+After applying each model to the test set, the model with the highest accuracy
+will be used for the prediction quiz portion of the assignment.
+
+### Decision Trees
+
 *Pending*
 
-### Random Forest
+### Random Forests
 
 *Pending*
 
-### Decision Tree
+### Generalized Boosted Model
 
 *Pending*
 
+## Conclusion
 
+*Pending*
 
 

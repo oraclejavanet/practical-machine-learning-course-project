@@ -74,6 +74,7 @@ library(rpart.plot)
 library(corrplot)
 library(e1071)
 library(randomForest)
+library(gbm)
 library(parallel)
 library(doParallel)
 rm(list = ls(all.names = TRUE))
@@ -220,8 +221,9 @@ different fashions:
 * Class E: throwing the hips to the front
 
 This is the "classe" variable in the training set and is used as an indicator
-of the training outcome. Class A corresponds to the specified execution of the
-exercise, while the other 4 classes correspond to common mistakes.
+of the training outcome. Class A corresponds to the specified (correct)
+execution of the exercise, while the other 4 classes correspond to common
+mistakes.
 
 The following plot shows the distribution of the classe variable in the training
 set.
@@ -261,14 +263,17 @@ will be used for the prediction quiz portion of the assignment.
 model to tune the amount of bias in the model and improve accuracy.
 
 ```{r set-fit-control, echo = TRUE}
-fitControlRpart <- rpart.control(method = "cv",
-                                 number = 3,
-                                 verboseIter = FALSE)
+# decision tree
+fitControlDT <- rpart.control(method = "cv", number = 3, verboseIter = FALSE)
 
-fitControlTrain <- trainControl(method = "cv",
-                                number = 3,
-                                verboseIter = FALSE,
-                                allowParallel = TRUE)
+# random forest
+fitControlRF <- trainControl(method = "cv", number = 3, verboseIter = FALSE, 
+                             allowParallel = TRUE)
+
+# generalized boosted model
+fitControlGBM <- trainControl(method = "repeatedcv", number = 3, repeats = 1,
+                              verboseIter = FALSE, allowParallel = TRUE)
+
 ```
 
 ### Decision Tree
@@ -279,7 +284,7 @@ Build the model and print the decision tree dentigram.
 set.seed(660067)
 modFitDT <- rpart(as.factor(classe) ~ .,
                   data = trainSet,
-                  control = fitControlRpart,
+                  control = fitControlDT,
                   method = "class")
 
 prp(modFitDT,
@@ -292,7 +297,7 @@ prp(modFitDT,
 ```
 
 Validate the Decision Tree model on the test set (`testSet`) to determine how
-well it performed by reviewing the "accuracy" variable.
+well it performed and the accuracy of the results.
 
 ```{r decision-tree-prediction, echo = TRUE}
 predictionDT <- predict(modFitDT, newdata = testSet, type = "class")
@@ -306,7 +311,7 @@ Plot the matrix results.
 g <- ggplot(data = as.data.frame(confMatrixDT$table),
             aes(x = Prediction, y = Reference))
 g <- g + geom_tile(aes(fill = Freq), colour = "white")
-g <- g + scale_fill_gradient(low = "white", high = "steelblue")
+g <- g + scale_fill_gradient(low = "white", high = "steelblue", name = "Frequency")
 g <- g + geom_text(aes(x = Prediction, y = Reference, label = Freq))
 g <- g + theme(plot.title = element_text(size = 14, hjust = 0.5, vjust = 0.5),
                axis.text.x = element_text(hjust = 0.5, vjust = 0.5),
@@ -334,10 +339,10 @@ numCores <- detectCores() - 1
 cluster <- makeCluster(numCores)
 registerDoParallel(cluster)
 timerStart <- Sys.time()
-modFitRf <- train(classe ~ .,
+modFitRF <- train(classe ~ .,
                   data = trainSet,
                   method = "rf",
-                  trControl = fitControlTrain,
+                  trControl = fitControlRF,
                   verbose = FALSE)
 timerEnd <- Sys.time()
 stopCluster(cluster)
@@ -347,50 +352,123 @@ buildTime = paste(round(timerEnd - timerStart, 2), attr(timerEnd - timerStart, "
 
 Build time: `r buildTime` using `r numCores` cores on `r os`.
 
-Review final model.
+Review the final model.
 
 ```{r random-forest-final-model, message = FALSE, echo = TRUE}
-print(modFitRf$finalModel)
+print(modFitRF$finalModel)
 ```
 
 Validate the Random Forest model on the test set (`testSet`) to determine how
-well it performed by reviewing the "accuracy" variable.
+well it performed and the accuracy of the results.
 
 ```{r random-forest-prediction, echo = TRUE}
-predictionRf <- predict(modFitRf, newdata = testSet)
-confMatrixRf <- confusionMatrix(predictionRf, testSet$classe)
-print(confMatrixRf)
+predictionRF <- predict(modFitRF, newdata = testSet)
+confMatrixRF <- confusionMatrix(predictionRF, testSet$classe)
+print(confMatrixRF)
 ```
 
 Plot the matrix results.
 
 ```{r random-forest-matrix-results, echo = TRUE}
-g <- ggplot(data = as.data.frame(confMatrixRf$table),
+g <- ggplot(data = as.data.frame(confMatrixRF$table),
             aes(x = Prediction, y = Reference))
 g <- g + geom_tile(aes(fill = Freq), colour = "white")
-g <- g + scale_fill_gradient(low = "white", high = "steelblue")
+g <- g + scale_fill_gradient(low = "white", high = "steelblue", name = "Frequency")
 g <- g + geom_text(aes(x = Prediction, y = Reference, label = Freq))
 g <- g + theme(plot.title = element_text(size = 14, hjust = 0.5, vjust = 0.5),
                axis.text.x = element_text(hjust = 0.5, vjust = 0.5),
                axis.text.y = element_text(hjust = 0.5, vjust = 0.5))
 g <- g + ggtitle(paste0("Random Forest Accuracy ",
-                        round(confMatrixRf$overall['Accuracy'], 3) * 100,
+                        round(confMatrixRF$overall['Accuracy'], 3) * 100,
                         "%"))
 print(g)
 ```
 
 The results from the confusion matrix for the Random Forest model show a
-predicted accuracy of `r round(confMatrixRf$overall['Accuracy'], 3)` giving an
-out-of-sample error rate of `r 1 - round(confMatrixRf$overall['Accuracy'], 3)`
-which shows that the model produces very accurate predictions for the class of
-dumbbell exercise.
+predicted accuracy of `r round(confMatrixRF$overall['Accuracy'], 3)` giving an
+out-of-sample error rate of `r 1 - round(confMatrixRF$overall['Accuracy'], 3)`
+which shows that the model produces very accurate predictions.
 
 ### Generalized Boosted Model
 
-*Pending*
+Build the Generalized Boosted Model, an implementation of extensions to Freund
+and Schapire's AdaBoost algorithm and Friedman's gradient boosting machine.
+
+```{r generalized-boosted-model-fit, message = FALSE, echo = TRUE, results = 'hold'}
+set.seed(660067)
+# initiate the cluster, leave 1 core for OS
+# NOTE: make certain "127.0.0.1 localhost" exists in /etc/hosts
+numCores <- detectCores() - 1
+cluster <- makeCluster(numCores)
+registerDoParallel(cluster)
+timerStart <- Sys.time()
+modFitGBM <- train(classe ~ .,
+                   data = trainSet,
+                   method = "gbm",
+                   trControl = fitControlGBM,
+                   verbose = FALSE)
+timerEnd <- Sys.time()
+stopCluster(cluster)
+registerDoSEQ()
+buildTime = paste(round(timerEnd - timerStart, 2), attr(timerEnd - timerStart, "units"))
+```
+
+Build time: `r buildTime` using `r numCores` cores on `r os`.
+
+Review the final model.
+
+```{r generalized-boosted-final-model, message = FALSE, echo = TRUE}
+print(modFitGBM$finalModel)
+```
+
+Validate the Generalized Boosted Model on the test set (`testSet`) to determine
+how well it performed and the accuracy of the results.
+
+```{r generalized-boosted-prediction, echo = TRUE}
+predictionGBM <- predict(modFitGBM, newdata = testSet)
+confMatrixGBM <- confusionMatrix(predictionGBM, testSet$classe)
+print(confMatrixGBM)
+```
+
+Plot the matrix results.
+
+```{r generalized-boosted-matrix-results, echo = TRUE}
+g <- ggplot(data = as.data.frame(confMatrixGBM$table),
+            aes(x = Prediction, y = Reference))
+g <- g + geom_tile(aes(fill = Freq), colour = "white")
+g <- g + scale_fill_gradient(low = "white", high = "steelblue", name = "Frequency")
+g <- g + geom_text(aes(x = Prediction, y = Reference, label = Freq))
+g <- g + theme(plot.title = element_text(size = 14, hjust = 0.5, vjust = 0.5),
+               axis.text.x = element_text(hjust = 0.5, vjust = 0.5),
+               axis.text.y = element_text(hjust = 0.5, vjust = 0.5))
+g <- g + ggtitle(paste0("Generalized Boosted Model Accuracy ",
+                        round(confMatrixGBM$overall['Accuracy'], 3) * 100,
+                        "%"))
+print(g)
+```
+
+The results from the confusion matrix for the Generalized Boosted Model show a
+predicted accuracy of `r round(confMatrixGBM$overall['Accuracy'], 3)` giving an
+out-of-sample error rate of `r 1 - round(confMatrixGBM$overall['Accuracy'], 3)`
+which shows that the model produces very accurate predictions.
 
 ## Conclusion
 
-*Pending*
+The goal for this project was to predict the manner in which a participant
+performed a particular dumbbell exercise. Using biometric data from the
+Weight Lifting Exercise dataset, we were able to fit three models that yielded
+the following accuracy rates:
 
+* Decision Tree : `r round(confMatrixDT$overall['Accuracy'], 3)`
+* Random Forest : `r round(confMatrixRF$overall['Accuracy'], 3)`
+* Generalized Boosted Model: `r round(confMatrixGBM$overall['Accuracy'], 3)`
 
+The Random Forest model proved to be the most accurate model for predicting
+the class of dumbbell exercise. As such, I will use the previously created
+Random Forest model to predict the 20 cases for the quiz portion of the
+assignment.
+
+```{r random-forest-prediction-quiz, echo = TRUE}
+predictionQuiz <- predict(modFitRF, newdata = validationData)
+predictionQuiz
+```

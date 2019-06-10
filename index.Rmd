@@ -69,7 +69,10 @@ workspace (including hidden objects).
 library(knitr)
 library(ggplot2)
 library(caret)
+library(rpart)
+library(rpart.plot)
 library(corrplot)
+library(e1071)
 library(randomForest)
 rm(list = ls(all.names = TRUE))
 setwd("~/repos/coursera/github-assignments/practical-machine-learning-course-project")
@@ -154,9 +157,9 @@ to only include data columns that make sense for prediction.
 
 ```{r clean-data, echo = TRUE}
 # remove variables with 'Nearly Zero Variance'
-NZV <- nearZeroVar(trainData)
-trainData  <- trainData[, -NZV]
-validationData  <- validationData[, -NZV]
+nzv <- nearZeroVar(trainData)
+trainData  <- trainData[, -nzv]
+validationData  <- validationData[, -nzv]
 
 # remove variables that are mostly NA
 mostlyNA <- sapply(trainData, function(x) mean(is.na(x))) > 0.95
@@ -188,7 +191,6 @@ Cross-validation within the training set will be used to improve model fit
 followed by an out-of-sample test with the test set.
 
 ```{r partition-data, echo = TRUE}
-set.seed(666700)
 inTrain  <- createDataPartition(trainData$classe, p = 0.6, list = FALSE)
 trainSet <- trainData[inTrain, ]
 testSet  <- trainData[-inTrain, ]
@@ -233,8 +235,8 @@ print(g)
 The following three modeling algorithms will be used in this analysis to
 determine which one provides the best out-of-sample accuracy:
 
-* Decision Trees
-* Random Forests
+* Decision Tree
+* Random Forest
 * Generalized Boosted Model
 
 At the end of each analysis, a confusion matrix will be shown to better
@@ -243,9 +245,66 @@ visualize the accuracy of the predictions.
 After applying each model to the test set, the model with the highest accuracy
 will be used for the prediction quiz portion of the assignment.
 
-### Decision Trees
+### Cross Validation
 
-*Pending*
+3-fold (k-fold) cross-validation will be used within the training set for each
+model to tune the amount of bias in the model and improve accuracy.
+
+```{r set-fit-control, echo = TRUE}
+fitControlRpart <- rpart.control(method = "cv", number = 3, verboseIter = TRUE)
+fitControlTrain <- trainControl(method = "cv", number = 3, verboseIter = TRUE)
+```
+
+### Decision Tree
+
+Build the model and print the decision tree dentigram.
+
+```{r decision-tree-model-fit, message = FALSE, echo = TRUE}
+set.seed(660067)
+modFitDecisionTree <- rpart(as.factor(classe) ~ .,
+                            data = trainSet,
+                            control = fitControlRpart,
+                            method = "class")
+prp(modFitDecisionTree,
+    faclen = 0,
+    box.palette = "GnBu",
+    cex = 0.50,
+    legend.x = 0,
+    legend.y = 1,
+    legend.cex = 1)
+```
+
+Validate the Decision Tree model on the test set (`testSet`) to determine how
+well it performed by reviewing the "accuracy" variable.
+
+```{r decision-tree-prediction, echo = TRUE}
+predictionDecisionTree <- predict(modFitDecisionTree, newdata = testSet, type = "class")
+confMatrixDecisionTree <- confusionMatrix(predictionDecisionTree, testSet$classe)
+print(confMatrixDecisionTree)
+```
+
+Plot the matrix results.
+
+```{r decision-tree-matrix-results, echo = TRUE}
+g <- ggplot(data = as.data.frame(confMatrixDecisionTree$table),
+            aes(x = Prediction, y = Reference))
+g <- g + geom_tile(aes(fill = Freq), colour = "white")
+g <- g + scale_fill_gradient(low = "white", high = "steelblue")
+g <- g + geom_text(aes(x = Prediction, y = Reference, label = Freq))
+g <- g + theme(plot.title = element_text(size = 14, hjust = 0.5, vjust = 0.5),
+               axis.text.x = element_text(hjust = 0.5, vjust = 0.5),
+               axis.text.y = element_text(hjust = 0.5, vjust = 0.5))
+g <- g + ggtitle(paste0("Decision Tree Accuracy ",
+                        round(confMatrixDecisionTree$overall['Accuracy'], 3) * 100,
+                        "%"))
+print(g)
+```
+
+The results from the confusion matrix for the Decision Tree model show a
+predicted accuracy of
+`r round(confMatrixDecisionTree$overall['Accuracy'], 3)` giving an out-of-sample
+error rate of `r 1 - round(confMatrixDecisionTree$overall['Accuracy'], 3)` which
+is considerable.
 
 ### Random Forests
 

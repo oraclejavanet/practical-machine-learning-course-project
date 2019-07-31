@@ -78,7 +78,7 @@ library(gbm)
 library(parallel)
 library(doParallel)
 rm(list = ls(all.names = TRUE))
-setwd("~/repos/coursera/github-assignments/practical-machine-learning-course-project")
+setwd("~/repos/coursera/data-science-specialization-github-assignments/practical-machine-learning-course-project")
 ```
 
 ```{r setup, include = FALSE}
